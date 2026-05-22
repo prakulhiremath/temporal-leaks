@@ -31,9 +31,9 @@ Additional tests:
 
 from __future__ import annotations
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
 from temporal_leaks import (
     AuditReport,
@@ -344,10 +344,7 @@ class TestPolarsInput:
 
         def pipeline(frame: object) -> object:
             import polars as pl  # noqa: F811
-            if isinstance(frame, pl.DataFrame):
-                pandas_frame = frame.to_pandas()
-            else:
-                pandas_frame = frame  # type: ignore[assignment]
+            pandas_frame = frame.to_pandas() if isinstance(frame, pl.DataFrame) else frame  # type: ignore[assignment]
             out = pandas_frame.copy()
             out["expanding_mean"] = out["value"].expanding().mean()
             return pl.from_pandas(out)
@@ -367,10 +364,7 @@ class TestPolarsInput:
 
         def pipeline(frame: object) -> object:
             import polars as pl  # noqa: F811
-            if isinstance(frame, pl.DataFrame):
-                pandas_frame = frame.to_pandas()
-            else:
-                pandas_frame = frame  # type: ignore[assignment]
+            pandas_frame = frame.to_pandas() if isinstance(frame, pl.DataFrame) else frame  # type: ignore[assignment]
             out = pandas_frame.copy()
             out["centred"] = out["value"].rolling(11, center=True, min_periods=1).mean()
             return pl.from_pandas(out)
