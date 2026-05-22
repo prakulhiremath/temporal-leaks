@@ -9,15 +9,12 @@ description = "Valgrind for Time-Series ML — automatically detect look-ahead b
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-
 authors = [
   { name = "Prakul Hiremath" },
 ]
-
 maintainers = [
   { name = "Prakul Hiremath" },
 ]
-
 keywords = [
   "time-series",
   "leakage",
@@ -29,7 +26,6 @@ keywords = [
   "forecasting",
   "feature-engineering",
 ]
-
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -46,7 +42,6 @@ classifiers = [
   "Topic :: Software Development :: Testing",
   "Typing :: Typed",
 ]
-
 dependencies = [
   "pandas>=1.5.0",
   "polars>=0.19.0",
@@ -62,15 +57,12 @@ dev = [
   "mypy>=1.5.0",
   "pandas-stubs>=2.0.0",
 ]
-
 pandas = [
   "pandas>=1.5.0",
 ]
-
 polars = [
   "polars>=0.19.0",
 ]
-
 all = [
   "pandas>=1.5.0",
   "polars>=0.19.0",
@@ -94,26 +86,15 @@ line-length = 100
 target-version = "py39"
 
 [tool.ruff.lint]
-select = [
-  "E",
-  "F",
-  "I",
-  "N",
-  "W",
-  "UP",
-  "ANN",
-  "B",
-  "SIM",
-  "TCH",
-]
-
-ignore = [
-  "ANN101",
-  "ANN102",
-]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = []
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ANN"]
+"tests/*" = ["ANN", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.mypy]
 python_version = "3.9"
