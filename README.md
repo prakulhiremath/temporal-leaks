@@ -3,6 +3,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" />
+  <img src="https://img.shields.io/pypi/v/temporal-leaks?style=flat-square&color=orange" />
+  <img src="https://img.shields.io/pypi/dm/temporal-leaks?style=flat-square" />
   <img src="https://img.shields.io/badge/pandas-%E2%9C%93-150458?style=flat-square&logo=pandas" />
   <img src="https://img.shields.io/badge/polars-%E2%9C%93-CD792C?style=flat-square" />
   <img src="https://img.shields.io/badge/mypy-strict-blue?style=flat-square" />
