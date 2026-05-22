@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "temporal-leaks"
-version = "0.1.0"
+version = "0.1.1"
 description = "Valgrind for Time-Series ML — automatically detect look-ahead bias in data science pipelines."
 readme = "README.md"
 requires-python = ">=3.9"
