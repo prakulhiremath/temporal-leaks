@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/mypy-strict-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/ruff-lint-red?style=flat-square" />
   <img src="https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions" />
+  <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19"><img src="https://img.shields.io/badge/Medium-Deep--Dive-black?style=flat-square&logo=medium" /></a>
 </p>
 
 ---
