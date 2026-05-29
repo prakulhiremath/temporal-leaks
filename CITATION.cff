@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+authors:
+  - family-names: "Hiremath"
+    given-names: "Prakul Sunil"
+    affiliation: "Aliens on Earth (AoE)"
+title: "temporal-leaks: A Dynamic Perturbation Framework for Look-Ahead Bias and Future Data Leakage Detection"
+version: "0.1.0"
+date-released: 2026-05-29
+repository-code: "https://github.com/prakulhiremath/temporal-leaks"
+keywords:
+  - machine learning
+  - time-series
+  - data leakage
+  - algorithmic trading
+  - mlops
