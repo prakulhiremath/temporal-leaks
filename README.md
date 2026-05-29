@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/mypy-strict-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/ruff-lint-red?style=flat-square" />
   <img src="https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions" />
-  <a href="https://doi.org/10.5281/zenodo.20440809"><img src="https://zenodo.org/badge/1247003166.svg" style="max-width: 100%;" /></a>
+  <a href="https://doi.org/10.5281/zenodo.20440809"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20440809-blue?style=flat-square" /></a>
   <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19"><img src="https://img.shields.io/badge/Medium-Deep--Dive-black?style=flat-square&logo=medium" /></a>
   
 </p>
