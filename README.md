@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions" />
   <a href="https://doi.org/10.5281/zenodo.20440809"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20440809-blue?style=flat-square" /></a>
   <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19"><img src="https://img.shields.io/badge/Medium-Deep--Dive-black?style=flat-square&logo=medium" /></a>
+  [![PyPI Downloads](https://static.pepy.tech/personalized-badge/temporal-leaks?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/temporal-leaks)
   
 </p>
 
