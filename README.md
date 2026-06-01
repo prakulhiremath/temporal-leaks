@@ -1,19 +1,27 @@
 # 🕵️ Temporal Leaks: Valgrind for Time-Series ML
 
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue?style=flat-square" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" />
+  <img src="https://img.shields.io/badge/Python-3.9%20|%203.10%20|%203.11%20|%203.12-blue?style=flat-square" />
   <img src="https://img.shields.io/pypi/v/temporal-leaks?style=flat-square&color=orange" />
   <img src="https://img.shields.io/pypi/dm/temporal-leaks?style=flat-square" />
-  <img src="https://img.shields.io/badge/pandas-%E2%9C%93-150458?style=flat-square&logo=pandas" />
-  <img src="https://img.shields.io/badge/polars-%E2%9C%93-CD792C?style=flat-square" />
+  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
+  <img src="https://img.shields.io/badge/Pandas-Supported-150458?style=flat-square&logo=pandas" />
+  <img src="https://img.shields.io/badge/Polars-Supported-CD792C?style=flat-square" />
+  <img src="https://img.shields.io/badge/CI-Passing-brightgreen?style=flat-square&logo=github-actions" />
   <img src="https://img.shields.io/badge/mypy-strict-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/ruff-lint-red?style=flat-square" />
-  <img src="https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github-actions" />
-  <a href="https://doi.org/10.5281/zenodo.20440809"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20440809-blue?style=flat-square" /></a>
-  <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19"><img src="https://img.shields.io/badge/Medium-Deep--Dive-black?style=flat-square&logo=medium" /></a>
-  [![PyPI Downloads](https://static.pepy.tech/personalized-badge/temporal-leaks?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/temporal-leaks)
-  
+</p>
+
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.20440809">
+    <img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20440809-blue?style=flat-square" />
+  </a>
+  <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19">
+    <img src="https://img.shields.io/badge/Article-Medium-black?style=flat-square&logo=medium" />
+  </a>
+  <a href="https://pepy.tech/projects/temporal-leaks">
+    <img src="https://static.pepy.tech/personalized-badge/temporal-leaks?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads" />
+  </a>
 </p>
 
 ---
