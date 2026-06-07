@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>temporal-leaks — Valgrind for Time-Series ML</title>
+    <meta name="description" content="Automatically detect look-ahead bias and data leakage in time-series machine learning pipelines. Catch the bugs before they cost you.">
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax for LaTeX rendering -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- Syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --accent: #0284c7;
+            --accent-light: #38bdf8;
+            --accent-dark: #0369a1;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+        }
+
+        .font-display {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        /* Code block styling */
+        .code-block {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .code-block code {
+            color: #e2e8f0;
+        }
+
+        .hljs-string { color: #86efac !important; }
+        .hljs-number { color: #fbbf24 !important; }
+        .hljs-literal { color: #818cf8 !important; }
+        .hljs-attr { color: #60a5fa !important; }
+        .hljs-title { color: #38bdf8 !important; }
+        .hljs-comment { color: #64748b !important; }
+
+        /* Temporal perturbation diagram */
+        .methodology-diagram {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            color: #475569;
+            margin: 2rem 0;
+        }
+
+        /* Bug vs clean comparison */
+        .code-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .code-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .code-example {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border-left: 3px solid;
+        }
+
+        .code-example.bug {
+            border-left-color: var(--danger);
+        }
+
+        .code-example.clean {
+            border-left-color: var(--success);
+        }
+
+        .code-example h4 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .code-example.bug h4 {
+            color: var(--danger);
+        }
+
+        .code-example.clean h4 {
+            color: var(--success);
+        }
+
+        /* API table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+
+        thead {
+            background: #f8fafc;
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            color: #475569;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(2, 132, 199, 0.05);
+        }
+
+        /* Feature card */
+        .feature-card {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(56, 189, 248, 0.05) 100%);
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Severity badge */
+        .severity-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .severity-low { background: #dbeafe; color: #1e40af; }
+        .severity-medium { background: #fed7aa; color: #92400e; }
+        .severity-high { background: #fed7aa; color: #ea580c; }
+        .severity-critical { background: #fecaca; color: #991b1b; }
+
+        /* Hero section */
+        .hero {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            padding: 6rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .hero-accent {
+            color: var(--accent);
+        }
+
+        /* Section */
+        .section {
+            padding: 4rem 0;
+        }
+
+        .section h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.01em;
+        }
+
+        .section h3 {
+            font-size: 1.375rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .section p {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #475569;
+            margin-bottom: 1rem;
+        }
+
+        .section ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section li {
+            color: #475569;
+            margin-bottom: 0.5rem;
+            line-height: 1.7;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            border: 1px solid var(--accent);
+        }
+
+        .btn:hover {
+            background: var(--accent-dark);
+            border-color: var(--accent-dark);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+        }
+
+        .btn-outline:hover {
+            background: rgba(2, 132, 199, 0.1);
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 4rem 0;
+        }
+
+        /* Info box */
+        .info-box {
+            background: #f0f9ff;
+            border-left: 3px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            margin: 2rem 0;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 3px solid var(--warning);
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            margin: 2rem 0;
+        }
+
+        .danger-box {
+            background: #fee2e2;
+            border-left: 3px solid var(--danger);
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            margin: 2rem 0;
+        }
+
+        .info-box strong { color: var(--accent); }
+        .warning-box strong { color: var(--warning); }
+        .danger-box strong { color: var(--danger); }
+
+        /* Stat boxes */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #475569;
+            margin-top: 0.5rem;
+        }
+
+        /* Grid of modes */
+        .modes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .mode-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            border-top: 3px solid var(--accent);
+        }
+
+        .mode-card h4 {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .mode-card p {
+            font-size: 0.875rem;
+            color: #475569;
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="max-w-6xl mx-auto px-6 sm:px-8">
+            <!-- Badges -->
+            <div class="flex flex-wrap gap-2 mb-8">
+                <span class="badge">🕵️ Detection Tool</span>
+                <a href="https://doi.org/10.5281/zenodo.20440809" class="badge" target="_blank" rel="noopener">
+                    🔬 Zenodo
+                </a>
+                <a href="https://pypi.org/project/temporal-leaks/" class="badge" target="_blank" rel="noopener">
+                    📦 PyPI
+                </a>
+                <a href="https://github.com/temporal-leaks/temporal-leaks" class="badge" target="_blank" rel="noopener">
+                    🔗 GitHub
+                </a>
+                <a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19" class="badge" target="_blank" rel="noopener">
+                    ✍️ Medium Article
+                </a>
+                <span class="badge">🐼 Pandas & Polars</span>
+                <span class="badge">✓ mypy strict</span>
+            </div>
+
+            <!-- Hero Content -->
+            <div class="max-w-3xl">
+                <h1 class="text-5xl sm:text-6xl font-display font-bold mb-4 text-slate-900">
+                    temporal-leaks
+                </h1>
+                <p class="text-xl text-slate-600 mb-2 font-display font-semibold">
+                    Valgrind for Time-Series ML
+                </p>
+                <p class="text-2xl font-display font-semibold mb-8">
+                    <span class="text-slate-700">Automatically detect</span>
+                    <span class="hero-accent"> look-ahead bias</span>
+                    <span class="text-slate-700"> before it costs you</span>
+                </p>
+                <p class="text-lg text-slate-600 mb-8 max-w-2xl leading-relaxed">
+                    A Python package that catches temporal leakage in your feature pipelines. Automatically test for data leakage, find which columns are compromised, and get actionable hints about where the bugs are — all without modifying your code.
+                </p>
+
+                <div class="flex flex-wrap gap-4">
+                    <a href="#quickstart" class="btn">Get Started</a>
+                    <a href="https://github.com/temporal-leaks/temporal-leaks" class="btn btn-outline" target="_blank" rel="noopener">
+                        View on GitHub →
+                    </a>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-6 italic">
+                    Pure Python, zero dependencies. Supports Pandas and Polars.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Problem -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <div class="danger-box">
+            <p class="text-lg text-slate-800 font-semibold mb-4">
+                "Your backtest shows 40% annual returns. You deploy. You lose money."
+            </p>
+            <p class="text-slate-700 leading-relaxed">
+                Look-ahead bias (data leakage) is the silent killer of quant strategies and forecasting models. Somewhere in your feature pipeline, a rolling average peeked at tomorrow's prices. Your tests passed. Your backtests looked amazing. <strong>And then reality hit.</strong>
+            </p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- The Problem -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>The Problem: Future Data in Your Past Features</h2>
+
+        <p>
+            In time-series machine learning, look-ahead bias occurs when a feature computed for timestamp <code class="bg-slate-200 px-2 py-1 rounded text-sm">t</code> inadvertently uses data from timestamps <code class="bg-slate-200 px-2 py-1 rounded text-sm">t+1</code>, <code class="bg-slate-200 px-2 py-1 rounded text-sm">t+2</code>, … <code class="bg-slate-200 px-2 py-1 rounded text-sm">t+n</code>.
+        </p>
+
+        <p>
+            This is devastatingly easy to introduce — and none of these will raise an error:
+        </p>
+
+        <div class="code-comparison">
+            <!-- BUG 1 -->
+            <div class="code-example bug">
+                <h4>❌ Centered Rolling Window</h4>
+                <div class="code-block" style="background: #fee2e2; color: #7f1d1d; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># center=True looks FORWARD
+df["roll_mean"] = df["price"].rolling(
+    window=5,
+    center=True
+).mean()</code></pre>
+                </div>
+            </div>
+
+            <!-- CLEAN 1 -->
+            <div class="code-example clean">
+                <h4>✓ Backward-Only Rolling Window</h4>
+                <div class="code-block" style="background: #f0fdf4; color: #166534; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># center=False (default) looks only back
+df["roll_mean"] = df["price"].rolling(
+    window=5,
+    center=False
+).mean()</code></pre>
+                </div>
+            </div>
+
+            <!-- BUG 2 -->
+            <div class="code-example bug">
+                <h4>❌ Forward Shift</h4>
+                <div class="code-block" style="background: #fee2e2; color: #7f1d1d; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># shift(-1) reads the NEXT row
+df["next_return"] = df["return"].shift(-1)</code></pre>
+                </div>
+            </div>
+
+            <!-- CLEAN 2 -->
+            <div class="code-example clean">
+                <h4>✓ Backward Shift</h4>
+                <div class="code-block" style="background: #f0fdf4; color: #166534; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># shift(+1) reads the PREVIOUS row
+df["prev_return"] = df["return"].shift(1)</code></pre>
+                </div>
+            </div>
+
+            <!-- BUG 3 -->
+            <div class="code-example bug">
+                <h4>❌ Global Normalization</h4>
+                <div class="code-block" style="background: #fee2e2; color: #7f1d1d; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># Uses ENTIRE dataset (future!)
+df["znorm"] = (
+    (df["price"] - df["price"].mean())
+    / df["price"].std()
+)</code></pre>
+                </div>
+            </div>
+
+            <!-- CLEAN 3 -->
+            <div class="code-example clean">
+                <h4>✓ Expanding Normalization</h4>
+                <div class="code-block" style="background: #f0fdf4; color: #166534; padding: 1rem; border-radius: 0.375rem; font-size: 0.8rem;">
+<pre><code class="language-python"># Only uses PAST data
+mean = df["price"].expanding().mean()
+std = df["price"].expanding().std()
+df["znorm"] = (df["price"] - mean) / std</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="danger-box">
+            <p>
+                <strong>None of these bugs will raise an error.</strong> Your tests will pass. Your backtests will look amazing. And then reality hits when you deploy to live trading.
+            </p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- The Solution -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>The Solution: Temporal Perturbation Test</h2>
+
+        <p>
+            <code>temporal-leaks</code> uses an automated temporal perturbation test that works like a memory debugger (Valgrind) but for time-series data.
+        </p>
+
+        <h3>How It Works</h3>
+
+        <div class="methodology-diagram">
+<pre>Timeline:  ──────────────────────────────────────────────────────────────►
+                                    T (checkpoint)
+                                    │
+Past ◀────────────────────────────────┤─────────────────────────────────► Future
+                                    │
+
+Step 1:  Run pipeline on ORIGINAL data
+         baseline_features = pipeline(df)
+
+Step 2:  MUTATE the FUTURE
+         df_perturbed[t > T] = 🔥 (noise / sign-flip / NaN)
+
+Step 3:  Re-run pipeline on PERTURBED data
+         perturbed_features = pipeline(df_perturbed)
+
+Step 4:  Compare PAST rows only (t ≤ T)
+         If baseline_features[t≤T] ≠ perturbed_features[t≤T]
+         then PAST depends on FUTURE → 🚨 LEAK DETECTED!</pre>
+        </div>
+
+        <div class="info-box">
+            <p>
+                <strong>Key insight:</strong> If your past features are truly causal, mutating the future should not change them. If they change, future data crept in somewhere.
+            </p>
+        </div>
+
+        <p>
+            The test is simple, deterministic, and reproducible. No black-box ML required.
+        </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Quick Start -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section" id="quickstart">
+        <h2>Quick Start</h2>
+
+        <h3>Installation</h3>
+
+        <div class="code-block mb-8"><pre><code class="language-bash">pip install temporal-leaks</code></pre></div>
+
+        <h3>Minimal Example</h3>
+
+        <div class="code-block mb-8"><pre><code class="language-python">import pandas as pd
+import numpy as np
+from temporal_leaks import TemporalAudit
+
+# Create sample data
+df = pd.DataFrame({
+    "ts": np.arange(500),
+    "price": np.random.default_rng(42).normal(100, 5, size=500),
+})
+
+# ─────────────────────────────────────────────────────────────────
+# ✓ CLEAN PIPELINE
+# ─────────────────────────────────────────────────────────────────
+def causal_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    # Expanding window: only looks at past ✓
+    out["expanding_mean"] = out["price"].expanding(min_count=1).mean()
+    # shift(+1): looks at previous row ✓
+    out["lag1"] = out["price"].shift(1)
+    return out
+
+auditor = TemporalAudit(mode="nullify", random_seed=42)
+report = auditor.check(df, timestamp_col="ts", pipeline_fn=causal_features)
+print(report)
+# ✓ CLEAN — leakage_score=0.0000
+
+
+# ─────────────────────────────────────────────────────────────────
+# ✗ LEAKING PIPELINE
+# ─────────────────────────────────────────────────────────────────
+def leaking_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    # center=True: peeks at future rows ✗
+    out["centred_roll"] = out["price"].rolling(
+        11, center=True, min_periods=1
+    ).mean()
+    return out
+
+try:
+    auditor.check(df, timestamp_col="ts", pipeline_fn=leaking_features)
+except TemporalLeakageError as exc:
+    print(exc)
+    # TemporalLeakageError: leakage_score=0.4812
+    #   Breached columns (1):
+    #     • [HIGH] column='centred_roll' effect_size=0.4812</code></pre></div>
+
+        <h3>Decorator API</h3>
+
+        <div class="code-block"><pre><code class="language-python">from temporal_leaks import temporal_audit
+
+@temporal_audit(timestamp_col="ts", mode="noise", random_seed=42)
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["expanding_mean"] = df["price"].expanding(min_count=1).mean()
+    return df
+
+# Audit runs automatically on every call
+result = build_features(df)  # raises TemporalLeakageError if leak detected</code></pre></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- HTML Reports -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>HTML Audit Reports</h2>
+
+        <p>
+            Every audit generates a beautiful, standalone HTML report you can share or archive:
+        </p>
+
+        <div class="code-block mb-8"><pre><code class="language-python">report = auditor.check(df, "ts", leaking_features)
+
+# Write a standalone HTML report
+with open("audit_report.html", "w") as f:
+    f.write(report.to_html())</code></pre></div>
+
+        <p>The report includes:</p>
+
+        <ul class="space-y-2 text-slate-700">
+            <li><strong>Leakage score</strong> with a visual progress bar</li>
+            <li><strong>Per-column severity badges</strong> (LOW / MEDIUM / HIGH / CRITICAL)</li>
+            <li><strong>Effect size, mean |Δ|, max |Δ|</strong> — quantified impact</li>
+            <li><strong>% rows changed</strong> — prevalence of the leak</li>
+            <li><strong>First timestamp</strong> where each leak was observed</li>
+            <li><strong>Provenance hints</strong> — likely causes and fixes</li>
+        </ul>
+
+        <div class="info-box mt-8">
+            <p>
+                HTML reports are great for sharing audit results with your team, archiving for compliance, or including in documentation.
+            </p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- API Reference -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>API Reference</h2>
+
+        <h3>TemporalAudit</h3>
+
+        <div class="code-block mb-8"><pre><code class="language-python">TemporalAudit(
+    mode: Literal["noise", "sign_flip", "nullify"] = "noise",
+    random_seed: int = 42,
+    delta_threshold: float = 1e-8,
+    leakage_threshold: float = 0.0,
+    ignore_columns: list[str] | None = None,
+)</code></pre></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>mode</code></td>
+                    <td><code>str</code></td>
+                    <td><strong>noise:</strong> adds Gaussian noise · <strong>sign_flip:</strong> multiplies by −1 · <strong>nullify:</strong> sets NaN</td>
+                </tr>
+                <tr>
+                    <td><code>random_seed</code></td>
+                    <td><code>int</code></td>
+                    <td>Integer seed for determinism. Fully reproducible across runs.</td>
+                </tr>
+                <tr>
+                    <td><code>delta_threshold</code></td>
+                    <td><code>float</code></td>
+                    <td>Minimum cell-level change to count as "different". Suppresses float noise.</td>
+                </tr>
+                <tr>
+                    <td><code>leakage_threshold</code></td>
+                    <td><code>float</code></td>
+                    <td>If <code>leakage_score > leakage_threshold</code>, raise error. Set to 1.1 to always return report.</td>
+                </tr>
+                <tr>
+                    <td><code>ignore_columns</code></td>
+                    <td><code>list[str]</code></td>
+                    <td>Output columns to skip during comparison (e.g., timestamps, IDs).</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Perturbation Modes</h3>
+
+        <div class="modes-grid">
+            <div class="mode-card">
+                <h4>noise</h4>
+                <p>Adds Gaussian noise to future rows: μ=0, σ=2×column_std. Safe for pipelines that handle noise.</p>
+            </div>
+
+            <div class="mode-card">
+                <h4>sign_flip</h4>
+                <p>Multiplies numeric values by −1. Good for testing sign-sensitive factors (momentum, etc).</p>
+            </div>
+
+            <div class="mode-card">
+                <h4>nullify</h4>
+                <p>Replaces future values with NaN. The strictest test — use this first.</p>
+            </div>
+        </div>
+
+        <h3>Severity Classification</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Severity</th>
+                    <th>Effect Size</th>
+                    <th>Interpretation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="severity-badge severity-low">🟦 LOW</span></td>
+                    <td><code>effect_size &lt; 0.15</code></td>
+                    <td>Minimal leakage. May be noise or minor bug.</td>
+                </tr>
+                <tr>
+                    <td><span class="severity-badge severity-medium">🟨 MEDIUM</span></td>
+                    <td><code>0.15 ≤ effect_size &lt; 0.40</code></td>
+                    <td>Noticeable leakage. Investigate and fix.</td>
+                </tr>
+                <tr>
+                    <td><span class="severity-badge severity-high">🟧 HIGH</span></td>
+                    <td><code>0.40 ≤ effect_size &lt; 0.75</code></td>
+                    <td>Significant leakage. Feature is compromised.</td>
+                </tr>
+                <tr>
+                    <td><span class="severity-badge severity-critical">🟥 CRITICAL</span></td>
+                    <td><code>effect_size ≥ 0.75</code></td>
+                    <td>Severe leakage. Feature is unreliable.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Backends & Benchmarks -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>Backends & Performance</h2>
+
+        <h3>Supported DataFrames</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">🐼 Pandas</h4>
+                <p class="text-sm text-slate-700">
+                    Full support for <code>pd.DataFrame</code>. Results returned as Pandas DataFrames.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">📊 Polars</h4>
+                <p class="text-sm text-slate-700">
+                    First-class Polars support. Recommended for large frames (10M+ rows). Results returned as Polars DataFrames.
+                </p>
+            </div>
+        </div>
+
+        <h3>Benchmarks</h3>
+
+        <p>Measured on Apple M2 Pro, 16 GB RAM:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Dataset</th>
+                    <th>Rows</th>
+                    <th>Columns</th>
+                    <th>Backend</th>
+                    <th>Mode</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Synthetic prices</td>
+                    <td>1,000,000</td>
+                    <td>5</td>
+                    <td>Polars</td>
+                    <td>nullify</td>
+                    <td><strong>~1.1 s</strong></td>
+                </tr>
+                <tr>
+                    <td>Synthetic prices</td>
+                    <td>10,000,000</td>
+                    <td>5</td>
+                    <td>Polars</td>
+                    <td>nullify</td>
+                    <td><strong>~3.2 s</strong></td>
+                </tr>
+                <tr>
+                    <td>Equity features</td>
+                    <td>500,000</td>
+                    <td>20</td>
+                    <td>Pandas</td>
+                    <td>noise</td>
+                    <td><strong>~2.8 s</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-box mt-8">
+            <p>
+                <strong>Performance tip:</strong> For large datasets (>100k rows), use Polars. It's typically 5-10x faster than Pandas for temporal operations.
+            </p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Testing -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>Testing & Development</h2>
+
+        <h3>Run the Test Suite</h3>
+
+        <div class="code-block mb-8"><pre><code class="language-bash"># Install dev extras
+pip install -e ".[dev]"
+
+# Run full test suite
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=temporal_leaks --cov-report=term-missing</code></pre></div>
+
+        <h3>Code Quality</h3>
+
+        <p>
+            The codebase is maintained to strict standards:
+        </p>
+
+        <div class="stat-grid">
+            <div class="stat-box">
+                <p class="stat-label">Type Checking</p>
+                <p class="stat-value" style="font-size: 1.5rem;">mypy</p>
+                <p class="stat-label">strict mode</p>
+            </div>
+            <div class="stat-box">
+                <p class="stat-label">Linting</p>
+                <p class="stat-value" style="font-size: 1.5rem;">ruff</p>
+                <p class="stat-label">all rules</p>
+            </div>
+            <div class="stat-box">
+                <p class="stat-label">CI/CD</p>
+                <p class="stat-value" style="font-size: 1.5rem;">GitHub</p>
+                <p class="stat-label">Actions</p>
+            </div>
+        </div>
+
+        <h3>Contributing</h3>
+
+        <div class="info-box mt-8">
+            <p>
+                Pull requests are welcome! Please make sure <code>ruff check .</code> and <code>mypy temporal_leaks/</code> pass before submitting.
+            </p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Key Features -->
+    <div class="max-w-6xl mx-auto px-6 sm:px-8 section">
+        <h2>Why temporal-leaks?</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">🎯 Automatic Detection</h4>
+                <p class="text-sm text-slate-700">
+                    No manual inspection. No guessing. The tool finds leaks automatically.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">📋 Detailed Reports</h4>
+                <p class="text-sm text-slate-700">
+                    Identifies exactly which columns leak, where, and why. HTML reports ready to share.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">🔬 Deterministic</h4>
+                <p class="text-sm text-slate-700">
+                    Reproducible across runs. Fixed seeds. No randomness in the results.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">⚡ No Dependencies</h4>
+                <p class="text-sm text-slate-700">
+                    Pure Python. Works with Pandas, Polars, or your own dataframe.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">✓ Decorator API</h4>
+                <p class="text-sm text-slate-700">
+                    One decorator. Audit runs automatically on every call. Ship with confidence.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <h4 class="font-bold text-slate-900 mb-2">🛠️ Polars Native</h4>
+                <p class="text-sm text-slate-700">
+                    First-class Polars support. Lightning-fast on large datasets.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Footer -->
+    <div class="bg-slate-50 border-t border-slate-200 py-12">
+        <div class="max-w-6xl mx-auto px-6 sm:px-8">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
+                <div>
+                    <h4 class="font-semibold text-slate-900 mb-4">Resources</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://pypi.org/project/temporal-leaks/" class="text-blue-600 hover:underline" target="_blank" rel="noopener">PyPI Package</a></li>
+                        <li><a href="https://github.com/temporal-leaks/temporal-leaks" class="text-blue-600 hover:underline" target="_blank" rel="noopener">GitHub Repository</a></li>
+                        <li><a href="https://doi.org/10.5281/zenodo.20440809" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Zenodo Archive</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-slate-900 mb-4">Learn</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://medium.com/@prakulhiremath/the-valgrind-for-time-series-ml-introducing-temporal-leaks-a8ad66c6cc19" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Medium Article</a></li>
+                        <li><a href="https://github.com/temporal-leaks/temporal-leaks/issues" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Report Issues</a></li>
+                        <li><a href="https://github.com/temporal-leaks/temporal-leaks#contributing" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Contributing Guide</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-slate-900 mb-4">Connect</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="mailto:prakulhiremath03@gmail.com" class="text-blue-600 hover:underline">Email</a></li>
+                        <li><a href="https://github.com/prakulhiremath" class="text-blue-600 hover:underline" target="_blank" rel="noopener">GitHub Profile</a></li>
+                        <li><a href="https://pepy.tech/projects/temporal-leaks" class="text-blue-600 hover:underline" target="_blank" rel="noopener">PyPI Stats</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 pt-8">
+                <p class="text-sm text-slate-600 text-center mb-4">
+                    <strong>temporal-leaks</strong> — Valgrind for Time-Series ML
+                </p>
+                <p class="text-xs text-slate-500 text-center">
+                    MIT License · Python 3.9+ · Pandas & Polars · <a href="https://github.com/temporal-leaks/temporal-leaks" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Open Source</a>
+                </p>
+                <p class="text-xs text-slate-500 text-center mt-4">
+                    <em>"Catch the bugs before they cost you."</em>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Highlight code blocks
+        document.querySelectorAll('.code-block pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Fade in on load
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '1';
+        });
+    </script>
+</body>
+</html>
